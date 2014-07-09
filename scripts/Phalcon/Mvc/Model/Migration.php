@@ -43,7 +43,7 @@ class Migration
      *
      * @var \Phalcon\Db
      */
-    protected static $_connection;
+    public static $_connection;
 
     /**
      * Database configuration
@@ -80,6 +80,7 @@ class Migration
         $configArray = $database->toArray();
         unset($configArray['adapter']);
         self::$_connection = new $adapter($configArray);
+        // var_dump(self::$_connection);
         self::$_databaseConfig = $database;
 
         if ( \Phalcon\Migrations::isConsole() ) {
@@ -119,6 +120,8 @@ class Migration
     public static function generateAll($version, $exportData=null)
     {
         $classDefinition = array();
+        var_dump(self::$_connection);
+        var_dump(self::$_connection->listTables());
         foreach (self::$_connection->listTables() as $table) {
             $classDefinition[$table] = self::generate($version, $table, $exportData);
         }

@@ -47,6 +47,7 @@ class Migration extends Command implements CommandsInterface
         'migrations=s'	=> "Migrations directory.",
         'directory=s' 	=> "Directory where the project was created.",
         'table=s' 		=> "Table to migrate. Default: all.",
+        'database=s'  => "Database to migrate. Default: all.",
         'version=s' 	=> "Version to migrate.",
         'force' 		=> "Forces to overwrite existing migrations.",
     );
@@ -125,6 +126,12 @@ class Migration extends Command implements CommandsInterface
             $tableName = 'all';
         }
 
+        if ($this->isReceivedOption('database')) {
+            $databaseName = $this->getOption('database');
+        } else {
+            $databaseName = 'all';
+        }
+
         $path = '';
         if ($this->isReceivedOption('directory')) {
             $path = $this->getOption('directory') .'/';
@@ -152,6 +159,7 @@ class Migration extends Command implements CommandsInterface
             Migrations::generate(array(
                 'directory' => $path,
                 'tableName' => $tableName,
+                'databaseName' => $databaseName,
                 'exportData' => $exportData,
                 'migrationsDir' => $migrationsDir,
                 'originalVersion' => $originalVersion,
@@ -163,6 +171,7 @@ class Migration extends Command implements CommandsInterface
                 Migrations::run(array(
                     'directory' => $path,
                     'tableName' => $tableName,
+                    'databaseName' => $databaseName,
                     'migrationsDir' => $migrationsDir,
                     'force' => $this->isReceivedOption('force'),
                     'config' => $config
