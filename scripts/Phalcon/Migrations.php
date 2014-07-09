@@ -213,7 +213,6 @@ class Migrations
                     if (file_exists($migrationsDir.'/'.$version.'/'.$sectionName)) {
                         $iterator = new \DirectoryIterator($migrationsDir.'/'.$version.'/'.$sectionName);
                         foreach ($iterator as $fileinfo) {
-                            var_dump($fileinfo->getFilename());
                             if ($fileinfo->isFile()) {
                                 if (preg_match('/\.php$/', $fileinfo->getFilename())) {
                                     \Phalcon\Mvc\Model\Migration::migrateFile((string) $version, $migrationsDir.'/'.$version.'/'.$sectionName.'/'.$fileinfo->getFilename());
