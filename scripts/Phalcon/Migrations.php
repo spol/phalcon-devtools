@@ -50,78 +50,35 @@ class Migrations
             mkdir($migrationsDir);
         }
 
-        if ($originalVersion) {
-
-            if (!preg_match('/[a-z0-9](\.[a-z0-9]+)*/', $originalVersion, $matches)) {
-                throw new \Exception('Version '.$originalVersion.' is invalid');
-            }
-
-            $originalVersion = $matches[0];
-            $version = new VersionItem($originalVersion, 3);
-            if (file_exists($migrationsDir.'/'.$version)) {
-                if (!$force) {
-                    throw new \Exception('Version '.$version.' is already generated');
-                }
-            }
-        } else {
-
-            $versions = array();
-            $iterator = new \DirectoryIterator($migrationsDir);
-            foreach ($iterator as $fileInfo) {
-                if ($fileInfo->isDir()) {
-                    if (preg_match('/[a-z0-9](\.[a-z0-9]+)+/', $fileInfo->getFilename(), $matches)) {
-                        $versions[] = new VersionItem($matches[0], 3);
-                    }
-                }
-            }
-
-            if (count($versions) == 0) {
-                $version = new VersionItem('1.0.0');
-            } else {
-                $version = VersionItem::maximum($versions);
-                $version = $version->addMinor(1);
-            }
-        }
-
-        if (!file_exists($migrationsDir.'/'.$version)) {
-            mkdir($migrationsDir.'/'.$version);
-        }
-
         // Find all DB sections
         if ($databaseName == 'all') {
             $sections = array_filter(array_keys(get_object_vars($config)), function($section) { return substr($section, -2) == 'DB'; });
         } else {
             $sections = [$databaseName];
         }
-        
 
         foreach ($sections as $sectionName)
         {
             ModelMigration::setup($config->$sectionName);
-            // if (isset($config->$sectionName)) {
-            //     ModelMigration::setup($config->$sectionName);
-            // } else {
-            //     throw new \Exception("Cannot load database configuration");
-            // }
 
-            if (!file_exists($migrationsDir.'/'.$version.'/'.$sectionName)) {
-                mkdir($migrationsDir.'/'.$version.'/'.$sectionName);
+            if (!file_exists($migrationsDir.'/'.$sectionName)) {
+                mkdir($migrationsDir.'/'.$sectionName);
             }
 
-            ModelMigration::setMigrationPath($migrationsDir.'/'.$version);
+            ModelMigration::setMigrationPath($migrationsDir);
             if ($tableName == 'all') {
-                $migrations = ModelMigration::generateAll($version, $exportData);
+                $migrations = ModelMigration::generateAll($exportData);
                 foreach ($migrations as $tName => $migration) {
-                    file_put_contents($migrationsDir.'/'.$version.'/'.$sectionName.'/'.$tName.'.php', '<?php '.PHP_EOL.PHP_EOL.$migration);
+                    file_put_contents($migrationsDir.'/'.$sectionName.'/'.$tName.'.php', '<?php '.PHP_EOL.PHP_EOL.$migration);
                 }
             } else {
-                $migration = ModelMigration::generate($version, $tableName, $exportData);
-                file_put_contents($migrationsDir.'/'.$version.'/'.$sectionName.'/'.$tableName.'.php', '<?php '.PHP_EOL.PHP_EOL.$migration);
+                $migration = ModelMigration::generate($tableName, $exportData);
+                file_put_contents($migrationsDir.'/'.$sectionName.'/'.$tableName.'.php', '<?php '.PHP_EOL.PHP_EOL.$migration);
             }
 
             if ( self::isConsole() ) {
 
-                print Color::success('Version '.$version.' was successfully generated').PHP_EOL;
+                print Color::success('Migration was successfully generated').PHP_EOL;
             }
         }
     }
@@ -172,24 +129,6 @@ class Migrations
             }
         }
 
-        if (count($versions) == 0) {
-            throw new \Phalcon\Mvc\Model\Exception('Migrations were not found at '.$migrationsDir);
-        } else {
-            $version = VersionItem::maximum($versions);
-        }
-
-        if (is_file($path.'.phalcon')) {
-            unlink($path.'.phalcon');
-            mkdir($path.'.phalcon');
-        }
-
-        $migrationFid = $path.'.phalcon/migration-version';
-        if (file_exists($migrationFid)) {
-            $fromVersion = file_get_contents($migrationFid);
-        } else {
-            $fromVersion = (string) $version;
-        }
-
         if ($databaseName == 'all') {
             // Find all DB sections
             $sections = array_filter(array_keys(get_object_vars($config)), function($section) { return substr($section, -2) == 'DB'; });
@@ -205,34 +144,29 @@ class Migrations
         {
             ModelMigration::setup($config->$sectionName);
 
-            ModelMigration::setMigrationPath($migrationsDir.'/'.$version.'/'.$sectionName);
+            ModelMigration::setMigrationPath($migrationsDir.'/'.$sectionName);
 
-            $versionsBetween = VersionItem::between($fromVersion, $version, $versions);
-            foreach ($versionsBetween as $version) {
                 if ($tableName == 'all') {
-                    if (file_exists($migrationsDir.'/'.$version.'/'.$sectionName)) {
-                        $iterator = new \DirectoryIterator($migrationsDir.'/'.$version.'/'.$sectionName);
+                    if (file_exists($migrationsDir.'/'.$sectionName)) {
+                        $iterator = new \DirectoryIterator($migrationsDir.'/'.$sectionName);
                         foreach ($iterator as $fileinfo) {
                             if ($fileinfo->isFile()) {
                                 if (preg_match('/\.php$/', $fileinfo->getFilename())) {
-                                    \Phalcon\Mvc\Model\Migration::migrateFile((string) $version, $migrationsDir.'/'.$version.'/'.$sectionName.'/'.$fileinfo->getFilename());
+                                    \Phalcon\Mvc\Model\Migration::migrateFile($migrationsDir.'/'.$sectionName.'/'.$fileinfo->getFilename());
                                 }
                             }
                         }
                     }
                 } else {
-                    $migrationPath = $migrationsDir.'/'.$version.'/'.$sectionName.'/'.$tableName.'.php';
+                    $migrationPath = $migrationsDir.'/'.$sectionName.'/'.$tableName.'.php';
                     if (file_exists($migrationPath)) {
-                        ModelMigration::migrateFile((string) $version, $migrationPath);
+                        ModelMigration::migrateFile($migrationPath);
                     } else {
                         throw new ScriptException('Migration class was not found '.$migrationPath);
                     }
                 }
-                print Color::success('Version '.$version.' was successfully migrated').PHP_EOL;
-            }
+                print Color::success('Database was successfully migrated').PHP_EOL;
         }
-
-        file_put_contents($migrationFid, (string) $version);
     }
 
 }

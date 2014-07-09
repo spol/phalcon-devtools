@@ -116,11 +116,11 @@ class Migration
      * @param  string $exportData
      * @return array
      */
-    public static function generateAll($version, $exportData=null)
+    public static function generateAll($exportData=null)
     {
         $classDefinition = array();
         foreach (self::$_connection->listTables() as $table) {
-            $classDefinition[$table] = self::generate($version, $table, $exportData);
+            $classDefinition[$table] = self::generate($table, $exportData);
         }
 
         return $classDefinition;
@@ -136,7 +136,7 @@ class Migration
      * @return string
      * @throws Exception
      */
-    public static function generate($version, $table, $exportData=null)
+    public static function generate($table, $exportData=null)
     {
 
         $oldColumn = null;
@@ -267,11 +267,14 @@ class Migration
         $optionsDefinition = array();
         $tableOptions = self::$_connection->tableOptions($table, $defaultSchema);
         foreach ($tableOptions as $optionName => $optionValue) {
+            if (strtoupper($optionName) == 'AUTO_INCREMENT') {
+                continue;
+            }
             $optionsDefinition[] = "\t\t\t\t'" . strtoupper($optionName) . "' => '" . $optionValue . "'";
         }
 
-        $classVersion = preg_replace('/[^0-9A-Za-z]/', '', $version);
-        $className = \Phalcon\Text::camelize($table) . 'Migration_'.$classVersion;
+        // $classVersion = preg_replace('/[^0-9A-Za-z]/', '', $version);
+        $className = \Phalcon\Text::camelize($table) . 'Migration'; //_'.$classVersion;
         $classData = "use Phalcon\\Db\\Column;
 use Phalcon\\Db\\Index;
 use Phalcon\\Db\\Reference;
@@ -330,7 +333,7 @@ class ".$className." extends Migration\n".
             $classData.="\n\t}";
         }
         $classData.="\n}\n";
-        $classData = str_replace("\t", "    ", $classData);
+        $classData = str_replace("\t", "  ", $classData);
 
         return $classData;
     }
@@ -343,12 +346,12 @@ class ".$className." extends Migration\n".
      *
      * @throws Exception
      */
-    public static function migrateFile($version, $filePath)
+    public static function migrateFile($filePath)
     {
         if (file_exists($filePath)) {
             $fileName = basename($filePath);
-            $classVersion = preg_replace('/[^0-9A-Za-z]/', '', $version);
-            $className = \Phalcon\Text::camelize(str_replace('.php', '', $fileName)).'Migration_'.$classVersion;
+            // $classVersion = preg_replace('/[^0-9A-Za-z]/', '', $version);
+            $className = \Phalcon\Text::camelize(str_replace('.php', '', $fileName)).'Migration'; //_'.$classVersion;
             require_once $filePath;
             if (class_exists($className)) {
                 $migration = new $className();
